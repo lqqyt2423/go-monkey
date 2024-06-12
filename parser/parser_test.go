@@ -69,6 +69,66 @@ return fn(a);
 	}
 }
 
+func TestString(t *testing.T) {
+	t.Skip()
+	input := "let a = b;"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	if input != program.String() {
+		t.Fatalf("input should equal out string, but got %s", program.String())
+	}
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "x;"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements len want %d, but got %d", 1, len(program.Statements))
+	}
+	stmt := program.Statements[0]
+	exStmt, ok := stmt.(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+	}
+	exp, ok := exStmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("should be *ast.Identifier, but got %T", exStmt.Expression)
+	}
+	if exp.Value != "x" {
+		t.Fatalf("want x, but got %q", exp.Value)
+	}
+}
+
+func TestIntegerLiteralExpression(t *testing.T) {
+	input := "5;"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements len want %d, but got %d", 1, len(program.Statements))
+	}
+	stmt := program.Statements[0]
+	exStmt, ok := stmt.(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+	}
+	exp, ok := exStmt.Expression.(*ast.IntegerLiteral)
+	if !ok {
+		t.Fatalf("should be *ast.IntegerLiteral, but got %T", exStmt.Expression)
+	}
+	if exp.Value != 5 {
+		t.Fatalf("want 5, but got %d", exp.Value)
+	}
+	if exp.TokenLiteral() != "5" {
+		t.Fatalf("want 5, but got %s", exp.TokenLiteral())
+	}
+}
+
 func checkParserErrors(t *testing.T, p *Parser) {
 	if len(p.Errors()) == 0 {
 		return
