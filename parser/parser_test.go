@@ -27,16 +27,20 @@ let foobar = 838383;
 
 	tests := []struct {
 		wantIdentifier string
+		wantStr        string
 	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
+		{"x", "let x = 5;"},
+		{"y", "let y = 10;"},
+		{"foobar", "let foobar = 838383;"},
 	}
 
 	for i, tt := range tests {
 		stmt := program.Statements[i]
 		if !testLetStatement(t, stmt, tt.wantIdentifier) {
 			return
+		}
+		if stmt.String() != tt.wantStr {
+			t.Fatalf("stmt.String() want %q, but got %q", tt.wantStr, stmt.String())
 		}
 	}
 }
@@ -45,7 +49,7 @@ func TestReturnStatements(t *testing.T) {
 	input := `
 return 5;
 return 5 * 5;
-return fn(a);
+return x(a);
 `
 	l := lexer.New(input)
 	p := New(l)
@@ -59,18 +63,26 @@ return fn(a);
 		t.Fatalf("program.Statements len want %d, but got %d", 3, len(program.Statements))
 	}
 
-	for _, stmt := range program.Statements {
+	wantStr := []string{
+		"return 5;",
+		"return (5 * 5);",
+		"return x(a) ;",
+	}
+
+	for i, stmt := range program.Statements {
 		if stmt.TokenLiteral() != "return" {
 			t.Errorf("stmt.TokenLiteral() want %q, but got %q", "return", stmt.TokenLiteral())
 		}
 		if _, ok := stmt.(*ast.ReturnStatement); !ok {
 			t.Errorf("stmt not *ast.ReturnStatement, got %T", stmt)
 		}
+		if stmt.String() != wantStr[i] {
+			t.Errorf("stmt.String() want %q, but got %q", wantStr[i], stmt.String())
+		}
 	}
 }
 
 func TestString(t *testing.T) {
-	t.Skip()
 	input := "let a = b;"
 	l := lexer.New(input)
 	p := New(l)
@@ -269,6 +281,96 @@ func TestIfExpression(t *testing.T) {
 			_, ok = exStmt.Expression.(*ast.IfExpression)
 			if !ok {
 				t.Fatalf("should be *ast.IfExpression, but got %T", exStmt)
+			}
+			if program.String() != tt.wantStr {
+				t.Fatalf("program.String() want %q, but got %q", tt.wantStr, program.String())
+			}
+		})
+	}
+}
+
+func TestFunctionLiteral(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{
+			input: "fn(x, y) { x + y; }",
+		},
+		{
+			input: "fn() {}",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := New(l)
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			if len(program.Statements) != 1 {
+				t.Fatalf("program.Statements len should be 1, but got %d", len(program.Statements))
+			}
+			stmt := program.Statements[0]
+			exStmt, ok := stmt.(*ast.ExpressionStatement)
+			if !ok {
+				t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+			}
+			_, ok = exStmt.Expression.(*ast.FunctionLiteral)
+			if !ok {
+				t.Fatalf("should be *ast.FunctionLiteral, but got %T", exStmt)
+			}
+		})
+	}
+}
+
+func TestCallExpression(t *testing.T) {
+	tests := []struct {
+		input   string
+		wantStr string
+	}{
+		{
+			input:   "call()",
+			wantStr: "call() ",
+		},
+		{
+			input:   "call(x)",
+			wantStr: "call(x) ",
+		},
+		{
+			input:   "call(x, y)",
+			wantStr: "call(x, y) ",
+		},
+		{
+			input:   "xyz(1, 2 * 3, 4 / 5)",
+			wantStr: "xyz(1, (2 * 3), (4 / 5)) ",
+		},
+		{
+			"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+			"add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)) ) ",
+		},
+		{
+			"add(a + b + c * d / f + g)",
+			"add((((a + b) + ((c * d) / f)) + g)) ",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := New(l)
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			if len(program.Statements) != 1 {
+				t.Fatalf("program.Statements len should be 1, but got %d", len(program.Statements))
+			}
+			stmt := program.Statements[0]
+			exStmt, ok := stmt.(*ast.ExpressionStatement)
+			if !ok {
+				t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+			}
+			_, ok = exStmt.Expression.(*ast.CallExpression)
+			if !ok {
+				t.Fatalf("should be *ast.CallExpression, but got %T", exStmt)
 			}
 			if program.String() != tt.wantStr {
 				t.Fatalf("program.String() want %q, but got %q", tt.wantStr, program.String())
