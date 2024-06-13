@@ -293,6 +293,7 @@ func TestComplexExpression(t *testing.T) {
 			"3 + 4 * 5 == 3 * 1 + 4 * 5",
 			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
 		},
+		{"true == false", "(true == false)"},
 	}
 
 	for _, tt := range tests {
