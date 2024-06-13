@@ -229,6 +229,54 @@ func TestInfixExpression(t *testing.T) {
 	}
 }
 
+func TestIfExpression(t *testing.T) {
+	tests := []struct {
+		input   string
+		wantStr string
+	}{
+		{
+			input:   "if (x == true) { 1 } else { 2 }",
+			wantStr: "if (x == true) 1 else 2",
+		},
+		{
+			input:   "if (y) { x }",
+			wantStr: "if y x",
+		},
+		{
+			input:   "if (x) { x; y; z; }",
+			wantStr: "if x xyz",
+		},
+		{
+			input:   "if (x) { x; y; z; 1 }",
+			wantStr: "if x xyz1",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := New(l)
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			if len(program.Statements) != 1 {
+				t.Fatalf("program.Statements len should be 1, but got %d", len(program.Statements))
+			}
+			stmt := program.Statements[0]
+			exStmt, ok := stmt.(*ast.ExpressionStatement)
+			if !ok {
+				t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+			}
+			_, ok = exStmt.Expression.(*ast.IfExpression)
+			if !ok {
+				t.Fatalf("should be *ast.IfExpression, but got %T", exStmt)
+			}
+			if program.String() != tt.wantStr {
+				t.Fatalf("program.String() want %q, but got %q", tt.wantStr, program.String())
+			}
+		})
+	}
+}
+
 func TestComplexExpression(t *testing.T) {
 	tests := []struct {
 		input   string
