@@ -129,6 +129,186 @@ func TestIntegerLiteralExpression(t *testing.T) {
 	}
 }
 
+func TestPrefixExpression(t *testing.T) {
+	tests := []struct {
+		input            string
+		wantOperator     string
+		wantIntegerValue int64
+	}{
+		{"!5;", "!", 5},
+		{"-15", "-", 15},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := New(l)
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			if len(program.Statements) != 1 {
+				t.Fatalf("program.Statements len should be 1, but got %d", len(program.Statements))
+			}
+			stmt := program.Statements[0]
+			exStmt, ok := stmt.(*ast.ExpressionStatement)
+			if !ok {
+				t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+			}
+			pe, ok := exStmt.Expression.(*ast.PrefixExpression)
+			if !ok {
+				t.Fatalf("should be *ast.PrefixExpression, but got %T", exStmt)
+			}
+			if pe.Operator != tt.wantOperator {
+				t.Fatalf("Operator want %s, but got %s", tt.wantOperator, pe.Operator)
+			}
+			ilExp, ok := pe.Right.(*ast.IntegerLiteral)
+			if !ok {
+				t.Fatalf("should be *ast.IntegerLiteral, but got %T", pe.Right)
+			}
+			if ilExp.Value != tt.wantIntegerValue {
+				t.Fatalf("want %d, but got %d", tt.wantIntegerValue, ilExp.Value)
+			}
+		})
+	}
+}
+
+func TestInfixExpression(t *testing.T) {
+	tests := []struct {
+		input        string
+		wantLeft     int64
+		wantOperator string
+		wantRight    int64
+	}{
+		{"1+2;", 1, "+", 2},
+		{"3-4;", 3, "-", 4},
+		{"5*6;", 5, "*", 6},
+		{"7/8;", 7, "/", 8},
+		{"11<12;", 11, "<", 12},
+		{"13>14;", 13, ">", 14},
+		{"15==16;", 15, "==", 16},
+		{"17!=18;", 17, "!=", 18},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := New(l)
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			if len(program.Statements) != 1 {
+				t.Fatalf("program.Statements len should be 1, but got %d", len(program.Statements))
+			}
+			stmt := program.Statements[0]
+			exStmt, ok := stmt.(*ast.ExpressionStatement)
+			if !ok {
+				t.Fatalf("should be *ast.ExpressionStatement, but got %T", stmt)
+			}
+			ie, ok := exStmt.Expression.(*ast.InfixExpression)
+			if !ok {
+				t.Fatalf("should be *ast.InfixExpression, but got %T", exStmt)
+			}
+			if ie.Operator != tt.wantOperator {
+				t.Fatalf("Operator want %s, but got %s", tt.wantOperator, ie.Operator)
+			}
+			ilExp, ok := ie.Left.(*ast.IntegerLiteral)
+			if !ok {
+				t.Fatalf("left should be *ast.IntegerLiteral, but got %T", ie.Left)
+			}
+			if ilExp.Value != tt.wantLeft {
+				t.Fatalf("left want %d, but got %d", tt.wantLeft, ilExp.Value)
+			}
+			ilExp, ok = ie.Right.(*ast.IntegerLiteral)
+			if !ok {
+				t.Fatalf("right should be *ast.IntegerLiteral, but got %T", ie.Right)
+			}
+			if ilExp.Value != tt.wantRight {
+				t.Fatalf("right want %d, but got %d", tt.wantRight, ilExp.Value)
+			}
+		})
+	}
+}
+
+func TestComplexExpression(t *testing.T) {
+	tests := []struct {
+		input   string
+		wantStr string
+	}{
+		{"1+2+3;", "((1 + 2) + 3)"},
+		{"1+2-3;", "((1 + 2) - 3)"},
+		{"1*2*3;", "((1 * 2) * 3)"},
+		{"1*2/3;", "((1 * 2) / 3)"},
+		{"1*2+3;", "((1 * 2) + 3)"},
+		{"1/2-3;", "((1 / 2) - 3)"},
+		{"1+2*3;", "(1 + (2 * 3))"},
+		{"1-2/3;", "(1 - (2 / 3))"},
+		{"-1+2-3;", "(((-1) + 2) - 3)"},
+		{"-1+2*3;", "((-1) + (2 * 3))"},
+		{"1+2*-3;", "(1 + (2 * (-3)))"},
+		{
+			"-a * b",
+			"((-a) * b)",
+		},
+		{
+			"!-a",
+			"(!(-a))",
+		},
+		{
+			"a + b + c",
+			"((a + b) + c)",
+		},
+		{
+			"a + b - c",
+			"((a + b) - c)",
+		},
+		{
+			"a * b * c",
+			"((a * b) * c)",
+		},
+		{
+			"a * b / c",
+			"((a * b) / c)",
+		},
+		{
+			"a + b / c",
+			"(a + (b / c))",
+		},
+		{
+			"a + b * c + d / e - f",
+			"(((a + (b * c)) + (d / e)) - f)",
+		},
+		{
+			"3 + 4; -5 * 5",
+			"(3 + 4)((-5) * 5)",
+		},
+		{
+			"5 > 4 == 3 < 4",
+			"((5 > 4) == (3 < 4))",
+		},
+		{
+			"5 < 4 != 3 > 4",
+			"((5 < 4) != (3 > 4))",
+		},
+		{
+			"3 + 4 * 5 == 3 * 1 + 4 * 5",
+			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := New(l)
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			if program.String() != tt.wantStr {
+				t.Fatalf("program.String() want %q, but got %q", tt.wantStr, program.String())
+			}
+		})
+	}
+}
+
 func checkParserErrors(t *testing.T, p *Parser) {
 	if len(p.Errors()) == 0 {
 		return
