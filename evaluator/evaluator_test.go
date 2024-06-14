@@ -208,3 +208,32 @@ func TestIfElseExpressions(t *testing.T) {
 		})
 	}
 }
+
+func TestReturnStatement(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue int64
+	}{
+		{"return 10;", 10},
+		{"return 10; 9;", 10},
+		{"return 2 * 5; 9;", 10},
+		{"9; return 2 * 5; 9;", 10},
+		{`if (10 > 1) { if (10 > 1) { return 10; } return 1;}`, 10},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			obj := Eval(program)
+			iobj, ok := obj.(*object.Integer)
+			if !ok {
+				t.Fatalf("should be *object.Integer, but got %T", obj)
+			}
+			if iobj.Value != tt.wantValue {
+				t.Fatalf("value want %d, but got %d", tt.wantValue, iobj.Value)
+			}
+		})
+	}
+}
