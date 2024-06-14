@@ -91,3 +91,81 @@ func TestBandOperator(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalIntegerInfixExpression(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue int64
+	}{
+		{"1+2", 3},
+		{"1-2", -1},
+		{"2-1", 1},
+		{"3*4", 12},
+		{"4/2", 2},
+		{"5/2", 2},
+		{"1+2*3", 7},
+		{"1-2+2", 1},
+		{"2-1/1", 1},
+		{"3*4+5", 17},
+		{"4/2-2", 0},
+		{"5/2+5*2", 12},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			obj := Eval(program)
+			iobj, ok := obj.(*object.Integer)
+			if !ok {
+				t.Fatalf("should be *object.Integer, but got %T", obj)
+			}
+			if iobj.Value != tt.wantValue {
+				t.Fatalf("value want %d, but got %d", tt.wantValue, iobj.Value)
+			}
+		})
+	}
+}
+
+func TestEvalCompareInfixExpression(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue bool
+	}{
+		{"1<2", true},
+		{"2<1", false},
+		{"1>2", false},
+		{"2>1", true},
+		{"1==2", false},
+		{"1==1", true},
+		{"1!=1", false},
+		{"1!=2", true},
+		{"true==true", true},
+		{"false==false", true},
+		{"true==false", false},
+		{"true!=true", false},
+		{"true!=false", true},
+		{"false!=false", false},
+		{"(1 < 2) == true", true},
+		{"(1 < 2) == false", false},
+		{"(1 > 2) == true", false},
+		{"(1 > 2) == false", true},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			obj := Eval(program)
+			iobj, ok := obj.(*object.Boolean)
+			if !ok {
+				t.Fatalf("should be *object.Boolean, but got %T", obj)
+			}
+			if iobj.Value != tt.wantValue {
+				t.Fatalf("value want %t, but got %t", tt.wantValue, iobj.Value)
+			}
+		})
+	}
+}
