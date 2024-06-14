@@ -169,3 +169,42 @@ func TestEvalCompareInfixExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestIfElseExpressions(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue int64
+		wantNull  bool
+	}{
+		{"if (true) { 10 }", 10, false},
+		{"if (false) { 10 }", 0, true},
+		{"if (1) { 10 }", 10, false},
+		{"if (1 < 2) { 10 }", 10, false},
+		{"if (1 > 2) { 10 }", 0, true},
+		{"if (1 > 2) { 10 } else { 20 }", 20, false},
+		{"if (1 < 2) { 10 } else { 20 }", 10, false},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			obj := Eval(program)
+
+			switch obj := obj.(type) {
+			case *object.Integer:
+				if obj.Value != tt.wantValue {
+					t.Fatalf("*object.Integer want %d, but got %d", tt.wantValue, obj.Value)
+				}
+			case *object.Null:
+				if !tt.wantNull {
+					t.Fatalf("want *object.Integer, but got *object.Null")
+				}
+			default:
+				t.Fatalf("type error %T", obj)
+			}
+		})
+	}
+}
