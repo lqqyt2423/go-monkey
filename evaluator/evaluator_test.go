@@ -237,3 +237,63 @@ func TestReturnStatement(t *testing.T) {
 		})
 	}
 }
+
+func TestErrorHandling(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue string
+	}{
+		{
+			"5 + true;",
+			"type mismatch: INTEGER + BOOLEAN",
+		},
+		{
+			"5 + true; 5;",
+			"type mismatch: INTEGER + BOOLEAN",
+		},
+		{
+			"-true",
+			"type mismatch: -BOOLEAN",
+		},
+		{
+			"true + false;",
+			"type mismatch: BOOLEAN + BOOLEAN",
+		},
+		{
+			"5; true + false; 5",
+			"type mismatch: BOOLEAN + BOOLEAN",
+		},
+		{
+			"if (10 > 1) { true + false; }",
+			"type mismatch: BOOLEAN + BOOLEAN",
+		},
+		{
+			`
+if (10 > 1) {
+  if (10 > 1) {
+    return true + false;
+  }
+
+  return 1;
+}
+`,
+			"type mismatch: BOOLEAN + BOOLEAN",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			obj := Eval(program)
+			iobj, ok := obj.(*object.Error)
+			if !ok {
+				t.Fatalf("should be *object.Error, but got %T", obj)
+			}
+			if iobj.Message != tt.wantValue {
+				t.Fatalf("value want %q, but got %q", tt.wantValue, iobj.Message)
+			}
+		})
+	}
+}

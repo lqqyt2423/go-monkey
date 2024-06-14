@@ -1,6 +1,8 @@
 package evaluator
 
 import (
+	"fmt"
+
 	"github.com/lqqyt2423/go-monkey/ast"
 	"github.com/lqqyt2423/go-monkey/object"
 )
@@ -16,7 +18,11 @@ func Eval(node ast.Node) object.Object {
 	case *ast.Program:
 		return evalProgram(node)
 	case *ast.ReturnStatement:
-		return &object.ReturnValue{Value: Eval(node.ReturnValue)}
+		v := Eval(node.ReturnValue)
+		if isError(v) {
+			return v
+		}
+		return &object.ReturnValue{Value: v}
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression)
 	case *ast.BlockStatement:
@@ -27,10 +33,19 @@ func Eval(node ast.Node) object.Object {
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.PrefixExpression:
 		right := Eval(node.Right)
+		if isError(right) {
+			return right
+		}
 		return evalPrefixExpression(node.Operator, right)
 	case *ast.InfixExpression:
 		left := Eval(node.Left)
+		if isError(left) {
+			return left
+		}
 		right := Eval(node.Right)
+		if isError(right) {
+			return right
+		}
 		return evalInfixExpression(node.Operator, left, right)
 	case *ast.IfExpression:
 		return evalIfExpression(node)
@@ -53,7 +68,7 @@ func evalStatements(stmts []ast.Statement) object.Object {
 	var result object.Object
 	for _, stmt := range stmts {
 		result = Eval(stmt)
-		if result.Type() == object.RETURN_VALUE_OBJ {
+		if result.Type() == object.RETURN_VALUE_OBJ || isError(result) {
 			return result
 		}
 	}
@@ -86,7 +101,7 @@ func evalBangOperatorExpression(right object.Object) object.Object {
 
 func evalMinusOperatorExpression(right object.Object) object.Object {
 	if right.Type() != object.INTEGER_OBJ {
-		return NULL
+		return newError("type mismatch: -%s", right.Type())
 	}
 	value := right.(*object.Integer).Value
 	return &object.Integer{Value: -value}
@@ -97,7 +112,7 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
 		if operator == "==" || operator == "!=" {
 			return evalEqInfixCompress(operator, left, right)
 		}
-		return NULL
+		return newError("type mismatch: %s + %s", left.Type(), right.Type())
 	}
 	leftValue := left.(*object.Integer).Value
 	rightValue := right.(*object.Integer).Value
@@ -151,8 +166,11 @@ func evalEqInfixCompress(operator string, left object.Object, right object.Objec
 }
 
 func evalIfExpression(node *ast.IfExpression) object.Object {
-	codition := Eval(node.Condition)
-	if isTruthy(codition) {
+	condition := Eval(node.Condition)
+	if isError(condition) {
+		return condition
+	}
+	if isTruthy(condition) {
 		return Eval(node.Consequence)
 	}
 	if node.Alternative != nil {
@@ -177,4 +195,15 @@ func isTruthy(v object.Object) bool {
 	default:
 		return true
 	}
+}
+
+func newError(format string, a ...any) object.Object {
+	return &object.Error{
+		Message: fmt.Sprintf(format, a...),
+	}
+}
+
+func isError(v object.Object) bool {
+	_, ok := v.(*object.Error)
+	return ok
 }
