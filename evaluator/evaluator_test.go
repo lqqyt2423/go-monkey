@@ -24,7 +24,8 @@ func TestEvalIntegerExpression(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			iobj, ok := obj.(*object.Integer)
 			if !ok {
 				t.Fatalf("should be *object.Integer, but got %T", obj)
@@ -50,7 +51,8 @@ func TestEvalBooleanExpression(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			bobj, ok := obj.(*object.Boolean)
 			if !ok {
 				t.Fatalf("should be *object.Boolean, but got %T", obj)
@@ -80,7 +82,8 @@ func TestBandOperator(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			bobj, ok := obj.(*object.Boolean)
 			if !ok {
 				t.Fatalf("should be *object.Boolean, but got %T", obj)
@@ -116,7 +119,8 @@ func TestEvalIntegerInfixExpression(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			iobj, ok := obj.(*object.Integer)
 			if !ok {
 				t.Fatalf("should be *object.Integer, but got %T", obj)
@@ -158,7 +162,8 @@ func TestEvalCompareInfixExpression(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			iobj, ok := obj.(*object.Boolean)
 			if !ok {
 				t.Fatalf("should be *object.Boolean, but got %T", obj)
@@ -191,7 +196,8 @@ func TestIfElseExpressions(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 
 			switch obj := obj.(type) {
 			case *object.Integer:
@@ -226,7 +232,8 @@ func TestReturnStatement(t *testing.T) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			iobj, ok := obj.(*object.Integer)
 			if !ok {
 				t.Fatalf("should be *object.Integer, but got %T", obj)
@@ -279,6 +286,10 @@ if (10 > 1) {
 `,
 			"type mismatch: BOOLEAN + BOOLEAN",
 		},
+		{
+			"foobar",
+			"identifier not found: foobar",
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -286,13 +297,42 @@ if (10 > 1) {
 			l := lexer.New(tt.input)
 			p := parser.New(l)
 			program := p.ParseProgram()
-			obj := Eval(program)
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
 			iobj, ok := obj.(*object.Error)
 			if !ok {
 				t.Fatalf("should be *object.Error, but got %T", obj)
 			}
 			if iobj.Message != tt.wantValue {
 				t.Fatalf("value want %q, but got %q", tt.wantValue, iobj.Message)
+			}
+		})
+	}
+}
+
+func TestLetStatements(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue int64
+	}{
+		{"let a = 5; a;", 5},
+		{"let a = 1 + 2; let b = a + 3; b;", 6},
+		{"let a = 2; let b = 3; let c = a * b; c;", 6},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
+			iobj, ok := obj.(*object.Integer)
+			if !ok {
+				t.Fatalf("should be *object.Integer, but got %T", obj)
+			}
+			if iobj.Value != tt.wantValue {
+				t.Fatalf("value want %d, but got %d", tt.wantValue, iobj.Value)
 			}
 		})
 	}
