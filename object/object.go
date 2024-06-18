@@ -1,6 +1,46 @@
 package object
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/lqqyt2423/go-monkey/ast"
+)
+
+type Environment struct {
+	store map[string]Object
+	outer *Environment
+}
+
+func NewEnvironment() *Environment {
+	return &Environment{
+		store: make(map[string]Object),
+	}
+}
+
+func ExtendEnvironment(variables []*ast.Identifier, values []Object, baseEnv *Environment) *Environment {
+	store := make(map[string]Object)
+	for i, key := range variables {
+		store[key.Value] = values[i]
+	}
+	return &Environment{
+		store: store,
+		outer: baseEnv,
+	}
+}
+
+func (env *Environment) Set(key string, val Object) Object {
+	env.store[key] = val
+	return val
+}
+
+func (env *Environment) Get(key string) (Object, bool) {
+	obj, ok := env.store[key]
+	if !ok && env.outer != nil {
+		return env.outer.Get(key)
+	}
+	return obj, ok
+}
 
 type ObjectType string
 
@@ -15,6 +55,7 @@ const (
 	NULL_OBJ         ObjectType = "NULL"
 	RETURN_VALUE_OBJ ObjectType = "RETURN_VALUE"
 	ERROR_OBJ        ObjectType = "ERROR"
+	FUNCTION_OBJ     ObjectType = "FUNCTION"
 )
 
 type Integer struct {
@@ -50,22 +91,23 @@ type Error struct {
 func (e *Error) Type() ObjectType { return ERROR_OBJ }
 func (e *Error) Inspect() string  { return "ERROR: " + e.Message }
 
-type Environment struct {
-	store map[string]Object
+type Function struct {
+	Parameters []*ast.Identifier
+	Body       *ast.BlockStatement
+	Env        *Environment
 }
 
-func NewEnvironment() *Environment {
-	return &Environment{
-		store: make(map[string]Object),
+func (f *Function) Type() ObjectType { return FUNCTION_OBJ }
+func (f *Function) Inspect() string {
+	var out strings.Builder
+	var params []string
+	for _, param := range f.Parameters {
+		params = append(params, param.String())
 	}
-}
-
-func (env *Environment) Set(key string, val Object) Object {
-	env.store[key] = val
-	return val
-}
-
-func (env *Environment) Get(key string) (Object, bool) {
-	obj, ok := env.store[key]
-	return obj, ok
+	out.WriteString("fn(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("\n}")
+	return out.String()
 }

@@ -337,3 +337,64 @@ func TestLetStatements(t *testing.T) {
 		})
 	}
 }
+
+func TestFunctionObject(t *testing.T) {
+	input := "fn(x) { x + 2; };"
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	env := object.NewEnvironment()
+	obj := Eval(program, env)
+	fobj, ok := obj.(*object.Function)
+	if !ok {
+		t.Fatalf("should be *object.Function, but got %T", obj)
+	}
+	if len(fobj.Parameters) != 1 {
+		t.Fatalf("Parameters len want 1, but got %d", len(fobj.Parameters))
+	}
+	wantBody := "(x + 2)"
+	if fobj.Body.String() != wantBody {
+		t.Fatalf("body want %q, but got %q", wantBody, fobj.Body.String())
+	}
+}
+
+func TestFunctionApplication(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue int64
+	}{
+		{"let identity = fn(x) { x; }; identity(5);", 5},
+		{"let identity = fn(x) { return x; }; identity(5);", 5},
+		{"let double = fn(x) { x * 2; }; double(5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn(x) { x; }(5)", 5},
+		{
+			`
+let newAdder = fn(x) {
+  fn(y) { x + y };
+};
+
+let addTwo = newAdder(2);
+addTwo(2);`,
+			4,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
+			iobj, ok := obj.(*object.Integer)
+			if !ok {
+				t.Fatalf("should be *object.Integer, but got %T", obj)
+			}
+			if iobj.Value != tt.wantValue {
+				t.Fatalf("value want %d, but got %d", tt.wantValue, iobj.Value)
+			}
+		})
+	}
+}

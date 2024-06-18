@@ -62,6 +62,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return newError("identifier not found: %s", node.Value)
 		}
 		return val
+	case *ast.FunctionLiteral:
+		return &object.Function{
+			Parameters: node.Parameters,
+			Body:       node.Body,
+			Env:        env,
+		}
+	case *ast.CallExpression:
+		return evalCallExpression(node, env)
 	default:
 		return NULL
 	}
@@ -190,6 +198,37 @@ func evalIfExpression(node *ast.IfExpression, env *object.Environment) object.Ob
 		return Eval(node.Alternative, env)
 	}
 	return NULL
+}
+
+func evalCallExpression(node *ast.CallExpression, env *object.Environment) object.Object {
+	function := Eval(node.Function, env)
+	if isError(function) {
+		return function
+	}
+	funcObj, ok := function.(*object.Function)
+	if !ok {
+		return newError("type mismatch: %s()", function.Type())
+	}
+
+	var args []object.Object
+	for _, argument := range node.Arguments {
+		arg := Eval(argument, env)
+		if isError(arg) {
+			return arg
+		}
+		args = append(args, arg)
+	}
+
+	if len(funcObj.Parameters) != len(args) {
+		return newError("arguments len %d mismatch, want %d", len(args), len(funcObj.Parameters))
+	}
+
+	callEnv := object.ExtendEnvironment(funcObj.Parameters, args, funcObj.Env)
+	val := Eval(funcObj.Body, callEnv)
+	if rval, ok := val.(*object.ReturnValue); ok {
+		return rval.Value
+	}
+	return val
 }
 
 func nativeBoolToBooleanObject(b bool) *object.Boolean {
