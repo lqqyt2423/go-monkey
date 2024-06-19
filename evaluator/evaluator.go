@@ -13,6 +13,23 @@ var (
 	FALSE = &object.Boolean{Value: false}
 )
 
+var builtins = map[string]*object.Builtin{
+	"len": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("arguments len %d mismatch, want %d", len(args), 1)
+			}
+			arg := args[0]
+			switch argObj := arg.(type) {
+			case *object.String:
+				return &object.Integer{Value: int64(len(argObj.Value))}
+			default:
+				return newError("type mismatch: %s", arg.Type())
+			}
+		},
+	},
+}
+
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
@@ -60,10 +77,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return NULL
 	case *ast.Identifier:
 		val, ok := env.Get(node.Value)
-		if !ok {
-			return newError("identifier not found: %s", node.Value)
+		if ok {
+			return val
 		}
-		return val
+		val, ok = builtins[node.Value]
+		if ok {
+			return val
+		}
+		return newError("identifier not found: %s", node.Value)
 	case *ast.FunctionLiteral:
 		return &object.Function{
 			Parameters: node.Parameters,
@@ -221,10 +242,6 @@ func evalCallExpression(node *ast.CallExpression, env *object.Environment) objec
 	if isError(function) {
 		return function
 	}
-	funcObj, ok := function.(*object.Function)
-	if !ok {
-		return newError("type mismatch: %s()", function.Type())
-	}
 
 	var args []object.Object
 	for _, argument := range node.Arguments {
@@ -235,16 +252,23 @@ func evalCallExpression(node *ast.CallExpression, env *object.Environment) objec
 		args = append(args, arg)
 	}
 
-	if len(funcObj.Parameters) != len(args) {
-		return newError("arguments len %d mismatch, want %d", len(args), len(funcObj.Parameters))
-	}
+	switch funcObj := function.(type) {
+	case *object.Builtin:
+		return funcObj.Fn(args...)
+	case *object.Function:
+		if len(funcObj.Parameters) != len(args) {
+			return newError("arguments len %d mismatch, want %d", len(args), len(funcObj.Parameters))
+		}
 
-	callEnv := object.ExtendEnvironment(funcObj.Parameters, args, funcObj.Env)
-	val := Eval(funcObj.Body, callEnv)
-	if rval, ok := val.(*object.ReturnValue); ok {
-		return rval.Value
+		callEnv := object.ExtendEnvironment(funcObj.Parameters, args, funcObj.Env)
+		val := Eval(funcObj.Body, callEnv)
+		if rval, ok := val.(*object.ReturnValue); ok {
+			return rval.Value
+		}
+		return val
+	default:
+		return newError("type mismatch: %s()", function.Type())
 	}
-	return val
 }
 
 func nativeBoolToBooleanObject(b bool) *object.Boolean {
