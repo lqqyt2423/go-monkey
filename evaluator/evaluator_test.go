@@ -21,6 +21,8 @@ func TestEvalIntegerExpression(t *testing.T) {
 		{"[1][0]", 1},
 		{"len([])", 0},
 		{"len([1])", 1},
+		{"len({})", 0},
+		{`len({"name":"lq"})`, 1},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -49,6 +51,7 @@ func TestEvalStringExpression(t *testing.T) {
 		{`"hello"`, "hello"},
 		{`"world"`, "world"},
 		{`"hello" + " world"`, "hello world"},
+		{`{"name":"lq"}["name"]`, "lq"},
 	}
 	for _, tt := range tests {
 		tt := tt

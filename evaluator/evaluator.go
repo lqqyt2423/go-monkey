@@ -25,6 +25,8 @@ var builtins = map[string]*object.Builtin{
 				return &object.Integer{Value: int64(len(argObj.Value))}
 			case *object.Array:
 				return &object.Integer{Value: int64(len(argObj.Elements))}
+			case *object.Hash:
+				return &object.Integer{Value: int64(len(argObj.Pairs))}
 			default:
 				return newError("type mismatch: %s", arg.Type())
 			}
@@ -62,6 +64,26 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			elements = append(elements, element)
 		}
 		return &object.Array{Elements: elements}
+	case *ast.HashLiteral:
+		hash := &object.Hash{
+			Pairs: make(map[string]object.Object),
+		}
+		for k, v := range node.Pairs {
+			key := Eval(k, env)
+			if isError(key) {
+				return key
+			}
+			keyStr, ok := key.(*object.String)
+			if !ok {
+				return newError("hash key should be String, but got %s", key.Type())
+			}
+			val := Eval(v, env)
+			if isError(val) {
+				return val
+			}
+			hash.Pairs[keyStr.Value] = val
+		}
+		return hash
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if isError(right) {
@@ -290,22 +312,35 @@ func evalIndexExpression(node *ast.IndexExpression, env *object.Environment) obj
 	if isError(left) {
 		return left
 	}
-	arr, ok := left.(*object.Array)
-	if !ok {
-		return newError("type mismatch: %s", left.Type())
-	}
 	index := Eval(node.Index, env)
 	if isError(index) {
 		return index
 	}
-	indexVal, ok := index.(*object.Integer)
-	if !ok {
-		return newError("type mismatch: %s", index.Type())
+
+	switch leftObj := left.(type) {
+	case *object.Array:
+		indexVal, ok := index.(*object.Integer)
+		if !ok {
+			return newError("type mismatch: %s", index.Type())
+		}
+		if indexVal.Value < 0 || indexVal.Value >= int64(len(leftObj.Elements)) {
+			return newError("out of index")
+		}
+		return leftObj.Elements[indexVal.Value]
+	case *object.Hash:
+		indexVal, ok := index.(*object.String)
+		if !ok {
+			return newError("type mismatch: %s", index.Type())
+		}
+		val, ok := leftObj.Pairs[indexVal.Value]
+		if ok {
+			return val
+		} else {
+			return NULL
+		}
+	default:
+		return newError("type mismatch: %s", left.Type())
 	}
-	if indexVal.Value < 0 || indexVal.Value >= int64(len(arr.Elements)) {
-		return newError("out of index")
-	}
-	return arr.Elements[indexVal.Value]
 }
 
 func nativeBoolToBooleanObject(b bool) *object.Boolean {

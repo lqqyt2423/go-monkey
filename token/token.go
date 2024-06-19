@@ -31,6 +31,7 @@ const (
 	// 分隔符
 	COMMA     TokenType = ","
 	SEMICOLON TokenType = ";"
+	COLON     TokenType = ":"
 
 	LPAREN   TokenType = "("
 	RPAREN   TokenType = ")"

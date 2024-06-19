@@ -14,6 +14,7 @@ true false if else return
 "world"
 1
 []
+:
 `
 	tests := []struct {
 		wantType    token.TokenType
@@ -45,6 +46,7 @@ true false if else return
 		{token.INT, "1"},
 		{token.LBRACKET, "["},
 		{token.RBRACKET, "]"},
+		{token.COLON, ":"},
 	}
 
 	l := New(input)
