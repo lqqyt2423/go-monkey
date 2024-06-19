@@ -37,6 +37,34 @@ func TestEvalIntegerExpression(t *testing.T) {
 	}
 }
 
+func TestEvalStringExpression(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantValue string
+	}{
+		{`"hello"`, "hello"},
+		{`"world"`, "world"},
+		{`"hello" + " world"`, "hello world"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			p := parser.New(l)
+			program := p.ParseProgram()
+			env := object.NewEnvironment()
+			obj := Eval(program, env)
+			iobj, ok := obj.(*object.String)
+			if !ok {
+				t.Fatalf("should be *object.String, but got %T", obj)
+			}
+			if iobj.Value != tt.wantValue {
+				t.Fatalf("value want %q, but got %q", tt.wantValue, iobj.Value)
+			}
+		})
+	}
+}
+
 func TestEvalBooleanExpression(t *testing.T) {
 	tests := []struct {
 		input     string
@@ -155,6 +183,8 @@ func TestEvalCompareInfixExpression(t *testing.T) {
 		{"(1 < 2) == false", false},
 		{"(1 > 2) == true", false},
 		{"(1 > 2) == false", true},
+		{`"hello" == "hello"`, true},
+		{`"hello" != "hello"`, false},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -289,6 +319,10 @@ if (10 > 1) {
 		{
 			"foobar",
 			"identifier not found: foobar",
+		},
+		{
+			`"hello" - "hello"`,
+			"type mismatch: STRING - STRING",
 		},
 	}
 	for _, tt := range tests {

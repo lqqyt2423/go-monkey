@@ -12,8 +12,9 @@ const (
 	EOF     TokenType = "EOF"
 
 	// 标识符+字面量
-	IDENT TokenType = "IDENT" // add, foobar, x, y, ...
-	INT   TokenType = "INT"   // 1343456
+	IDENT  TokenType = "IDENT" // add, foobar, x, y, ...
+	INT    TokenType = "INT"   // 1343456
+	STRING TokenType = "STRING"
 
 	// 运算符
 	ASSIGN   TokenType = "="

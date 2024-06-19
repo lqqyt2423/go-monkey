@@ -10,6 +10,9 @@ func TestNextTokenSimple(t *testing.T) {
 	input := `=+(){},;-*/<>!
 true false if else return
 == !=
+"hello"
+"world"
+1
 `
 	tests := []struct {
 		wantType    token.TokenType
@@ -36,6 +39,9 @@ true false if else return
 		{token.RETURN, "return"},
 		{token.EQ, "=="},
 		{token.NOT_EQ, "!="},
+		{token.STRING, "hello"},
+		{token.STRING, "world"},
+		{token.INT, "1"},
 	}
 
 	l := New(input)
@@ -59,7 +65,8 @@ let add = fn(x, y) {
   x + y;
 };
 
-let result = add(five, ten);`
+let result = add(five, ten);
+"hello" 123`
 
 	tests := []struct {
 		wantType    token.TokenType
@@ -101,6 +108,8 @@ let result = add(five, ten);`
 		{token.IDENT, "ten"},
 		{token.RPAREN, ")"},
 		{token.SEMICOLON, ";"},
+		{token.STRING, "hello"},
+		{token.INT, "123"},
 		{token.EOF, ""},
 	}
 

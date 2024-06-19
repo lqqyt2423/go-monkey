@@ -29,6 +29,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalStatements(node.Statements, env)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	case *ast.Boolean:
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.PrefixExpression:
@@ -129,6 +131,20 @@ func evalMinusOperatorExpression(right object.Object) object.Object {
 }
 
 func evalInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+	if left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ {
+		leftVal := left.(*object.String).Value
+		rightVal := right.(*object.String).Value
+		switch operator {
+		case "+":
+			return &object.String{Value: leftVal + rightVal}
+		case "==":
+			return &object.Boolean{Value: leftVal == rightVal}
+		case "!=":
+			return &object.Boolean{Value: leftVal != rightVal}
+		}
+		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
+	}
+
 	if left.Type() != object.INTEGER_OBJ || right.Type() != object.INTEGER_OBJ {
 		if operator == "==" || operator == "!=" {
 			return evalEqInfixCompress(operator, left, right)

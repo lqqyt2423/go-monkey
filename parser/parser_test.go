@@ -12,6 +12,8 @@ func TestLetStatements(t *testing.T) {
 let x = 5;
 let y = 10;
 let foobar = 838383;
+let s = "hello";
+let fs = s + "world";
 `
 	l := lexer.New(input)
 	p := New(l)
@@ -21,8 +23,8 @@ let foobar = 838383;
 	if program == nil {
 		t.Fatalf("ParseProgram should not be nil")
 	}
-	if len(program.Statements) != 3 {
-		t.Fatalf("program.Statements len want %d, but got %d", 3, len(program.Statements))
+	if len(program.Statements) != 5 {
+		t.Fatalf("program.Statements len want %d, but got %d", 5, len(program.Statements))
 	}
 
 	tests := []struct {
@@ -32,6 +34,8 @@ let foobar = 838383;
 		{"x", "let x = 5;"},
 		{"y", "let y = 10;"},
 		{"foobar", "let foobar = 838383;"},
+		{"s", `let s = "hello";`},
+		{"fs", `let fs = (s + "world");`},
 	}
 
 	for i, tt := range tests {
