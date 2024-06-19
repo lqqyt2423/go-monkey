@@ -14,6 +14,10 @@ let y = 10;
 let foobar = 838383;
 let s = "hello";
 let fs = s + "world";
+let a = [1, 2 ,3];
+let b = [];
+let c = ["hello", 2];
+let d = [1][0];
 `
 	l := lexer.New(input)
 	p := New(l)
@@ -23,8 +27,8 @@ let fs = s + "world";
 	if program == nil {
 		t.Fatalf("ParseProgram should not be nil")
 	}
-	if len(program.Statements) != 5 {
-		t.Fatalf("program.Statements len want %d, but got %d", 5, len(program.Statements))
+	if len(program.Statements) != 9 {
+		t.Fatalf("program.Statements len want %d, but got %d", 9, len(program.Statements))
 	}
 
 	tests := []struct {
@@ -36,6 +40,10 @@ let fs = s + "world";
 		{"foobar", "let foobar = 838383;"},
 		{"s", `let s = "hello";`},
 		{"fs", `let fs = (s + "world");`},
+		{"a", "let a = [1, 2, 3];"},
+		{"b", "let b = [];"},
+		{"c", `let c = ["hello", 2];`},
+		{"d", "let d = ([1][0]);"},
 	}
 
 	for i, tt := range tests {

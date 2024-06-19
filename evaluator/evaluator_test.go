@@ -18,6 +18,9 @@ func TestEvalIntegerExpression(t *testing.T) {
 		{"-5", -5},
 		{"-10", -10},
 		{`len("hello")`, 5},
+		{"[1][0]", 1},
+		{"len([])", 0},
+		{"len([1])", 1},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -324,6 +327,10 @@ if (10 > 1) {
 		{
 			`"hello" - "hello"`,
 			"type mismatch: STRING - STRING",
+		},
+		{
+			"[1][1]",
+			"out of index",
 		},
 	}
 	for _, tt := range tests {

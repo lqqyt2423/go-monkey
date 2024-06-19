@@ -37,6 +37,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.LPAREN, p.parseGroupExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
+	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
@@ -47,6 +48,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	p.nextToken()
 	p.nextToken()
@@ -68,6 +70,7 @@ const (
 	PRODUCT                // *
 	PREFIX                 // -X or !X
 	CALL                   // myFunction(X)
+	INDEX                  // array[index]
 )
 
 var precedences = map[token.TokenType]Precedence{
@@ -80,6 +83,7 @@ var precedences = map[token.TokenType]Precedence{
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
 	token.LPAREN:   CALL,
+	token.LBRACKET: INDEX,
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
@@ -326,6 +330,38 @@ func (p *Parser) parseCallExpression(left ast.Expression) ast.Expression {
 		}
 	}
 	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	return exp
+}
+
+func (p *Parser) parseArrayLiteral() ast.Expression {
+	exp := &ast.ArrayLiteral{Token: p.curToken}
+	if !p.peekTokenIs(token.RBRACKET) {
+		p.nextToken()
+		ele := p.parseExpression(LOWEST)
+		exp.Elements = append(exp.Elements, ele)
+		for p.peekTokenIs(token.COMMA) {
+			p.nextToken()
+			p.nextToken()
+			ele := p.parseExpression(LOWEST)
+			exp.Elements = append(exp.Elements, ele)
+		}
+	}
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+	return exp
+}
+
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	exp := &ast.IndexExpression{
+		Token: p.curToken,
+		Left:  left,
+	}
+	p.nextToken()
+	exp.Index = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RBRACKET) {
 		return nil
 	}
 	return exp

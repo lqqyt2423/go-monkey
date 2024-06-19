@@ -13,6 +13,7 @@ true false if else return
 "hello"
 "world"
 1
+[]
 `
 	tests := []struct {
 		wantType    token.TokenType
@@ -42,6 +43,8 @@ true false if else return
 		{token.STRING, "hello"},
 		{token.STRING, "world"},
 		{token.INT, "1"},
+		{token.LBRACKET, "["},
+		{token.RBRACKET, "]"},
 	}
 
 	l := New(input)

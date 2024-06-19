@@ -23,6 +23,8 @@ var builtins = map[string]*object.Builtin{
 			switch argObj := arg.(type) {
 			case *object.String:
 				return &object.Integer{Value: int64(len(argObj.Value))}
+			case *object.Array:
+				return &object.Integer{Value: int64(len(argObj.Elements))}
 			default:
 				return newError("type mismatch: %s", arg.Type())
 			}
@@ -50,6 +52,16 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.String{Value: node.Value}
 	case *ast.Boolean:
 		return nativeBoolToBooleanObject(node.Value)
+	case *ast.ArrayLiteral:
+		var elements []object.Object
+		for _, ele := range node.Elements {
+			element := Eval(ele, env)
+			if isError(element) {
+				return element
+			}
+			elements = append(elements, element)
+		}
+		return &object.Array{Elements: elements}
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if isError(right) {
@@ -93,6 +105,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 	case *ast.CallExpression:
 		return evalCallExpression(node, env)
+	case *ast.IndexExpression:
+		return evalIndexExpression(node, env)
 	default:
 		return NULL
 	}
@@ -269,6 +283,29 @@ func evalCallExpression(node *ast.CallExpression, env *object.Environment) objec
 	default:
 		return newError("type mismatch: %s()", function.Type())
 	}
+}
+
+func evalIndexExpression(node *ast.IndexExpression, env *object.Environment) object.Object {
+	left := Eval(node.Left, env)
+	if isError(left) {
+		return left
+	}
+	arr, ok := left.(*object.Array)
+	if !ok {
+		return newError("type mismatch: %s", left.Type())
+	}
+	index := Eval(node.Index, env)
+	if isError(index) {
+		return index
+	}
+	indexVal, ok := index.(*object.Integer)
+	if !ok {
+		return newError("type mismatch: %s", index.Type())
+	}
+	if indexVal.Value < 0 || indexVal.Value >= int64(len(arr.Elements)) {
+		return newError("out of index")
+	}
+	return arr.Elements[indexVal.Value]
 }
 
 func nativeBoolToBooleanObject(b bool) *object.Boolean {
