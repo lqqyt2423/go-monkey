@@ -7,5 +7,6 @@ import (
 )
 
 func main() {
-	repl.Start(os.Stdin, os.Stdout)
+	// repl.Start(os.Stdin, os.Stdout)
+	repl.StartVM(os.Stdin, os.Stdout)
 }
