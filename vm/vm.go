@@ -50,17 +50,43 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
-		case code.OpAdd:
-			right := vm.pop()
-			left := vm.pop()
-			leftValue := left.(*object.Integer).Value
-			rightValue := right.(*object.Integer).Value
-			result := leftValue + rightValue
-			vm.push(&object.Integer{Value: result})
+		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
+			vm.execBinaryOperation(op)
 		case code.OpPop:
 			vm.pop()
 		}
 	}
+	return nil
+}
+
+func (vm *VM) execBinaryOperation(op code.Opcode) error {
+	right := vm.pop()
+	left := vm.pop()
+	rightType := right.Type()
+	leftType := left.Type()
+	if rightType == object.INTEGER_OBJ && leftType == object.INTEGER_OBJ {
+		return vm.execBinaryIntegerOperation(op, left, right)
+	}
+	return fmt.Errorf("unsupported types for binary operation: %s %s", leftType, rightType)
+}
+
+func (vm *VM) execBinaryIntegerOperation(op code.Opcode, left, right object.Object) error {
+	leftVal := left.(*object.Integer).Value
+	rightVal := right.(*object.Integer).Value
+	var result int64
+	switch op {
+	case code.OpAdd:
+		result = leftVal + rightVal
+	case code.OpSub:
+		result = leftVal - rightVal
+	case code.OpMul:
+		result = leftVal * rightVal
+	case code.OpDiv:
+		result = leftVal / rightVal
+	default:
+		return fmt.Errorf("invalid op %v", op)
+	}
+	vm.push(&object.Integer{Value: result})
 	return nil
 }
 
