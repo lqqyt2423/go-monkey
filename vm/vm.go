@@ -8,6 +8,11 @@ import (
 	"github.com/lqqyt2423/go-monkey/object"
 )
 
+var (
+	TRUE  = &object.Boolean{Value: true}
+	FALSE = &object.Boolean{Value: false}
+)
+
 const StackSize = 2048
 
 type VM struct {
@@ -54,6 +59,12 @@ func (vm *VM) Run() error {
 			vm.execBinaryOperation(op)
 		case code.OpPop:
 			vm.pop()
+		case code.OpTrue:
+			vm.push(TRUE)
+		case code.OpFalse:
+			vm.push(FALSE)
+		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
+			vm.execCompareOperation(op)
 		}
 	}
 	return nil
@@ -90,6 +101,65 @@ func (vm *VM) execBinaryIntegerOperation(op code.Opcode, left, right object.Obje
 	return nil
 }
 
+func (vm *VM) execCompareOperation(op code.Opcode) error {
+	right := vm.pop()
+	left := vm.pop()
+	rightType := right.Type()
+	leftType := left.Type()
+
+	if rightType == object.INTEGER_OBJ && leftType == object.INTEGER_OBJ {
+		leftVal := left.(*object.Integer).Value
+		rightVal := right.(*object.Integer).Value
+		switch op {
+		case code.OpGreaterThan:
+			if leftVal > rightVal {
+				vm.push(nativeBoolToBooleanObject(true))
+			} else {
+				vm.push(nativeBoolToBooleanObject(false))
+			}
+		case code.OpEqual:
+			if leftVal == rightVal {
+				vm.push(nativeBoolToBooleanObject(true))
+			} else {
+				vm.push(nativeBoolToBooleanObject(false))
+			}
+		case code.OpNotEqual:
+			if leftVal != rightVal {
+				vm.push(nativeBoolToBooleanObject(true))
+			} else {
+				vm.push(nativeBoolToBooleanObject(false))
+			}
+		default:
+			return fmt.Errorf("invalid op %v", op)
+		}
+		return nil
+	}
+
+	if rightType == object.BOOLEAN_OBJ && leftType == object.BOOLEAN_OBJ {
+		leftVal := left.(*object.Boolean).Value
+		rightVal := right.(*object.Boolean).Value
+		switch op {
+		case code.OpEqual:
+			if leftVal == rightVal {
+				vm.push(nativeBoolToBooleanObject(true))
+			} else {
+				vm.push(nativeBoolToBooleanObject(false))
+			}
+		case code.OpNotEqual:
+			if leftVal != rightVal {
+				vm.push(nativeBoolToBooleanObject(true))
+			} else {
+				vm.push(nativeBoolToBooleanObject(false))
+			}
+		default:
+			return fmt.Errorf("invalid op %v", op)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("unsupported types for compare operation: %s %v %s", leftType, op, rightType)
+}
+
 func (vm *VM) push(o object.Object) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
@@ -103,4 +173,11 @@ func (vm *VM) pop() object.Object {
 	o := vm.stack[vm.sp-1]
 	vm.sp--
 	return o
+}
+
+func nativeBoolToBooleanObject(b bool) *object.Boolean {
+	if b {
+		return TRUE
+	}
+	return FALSE
 }
