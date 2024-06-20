@@ -58,6 +58,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 			return err
 		}
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 0)
+		beforePos := len(c.instructions)
 		err = c.Compile(node.Consequence)
 		if err != nil {
 			return err
@@ -65,10 +66,18 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if c.lastInstructionIsPop() {
 			c.removeLastPop()
 		}
-		if node.Alternative != nil {
-			jumpPos := c.emit(code.OpJump, 0)
-			afterConsequencePos := len(c.instructions)
-			c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
+		if len(c.instructions) == beforePos {
+			c.emit(code.OpNull)
+		}
+
+		jumpPos := c.emit(code.OpJump, 0)
+		afterConsequencePos := len(c.instructions)
+		c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
+
+		if node.Alternative == nil {
+			c.emit(code.OpNull)
+		} else {
+			beforePos := len(c.instructions)
 			err = c.Compile(node.Alternative)
 			if err != nil {
 				return err
@@ -76,15 +85,12 @@ func (c *Compiler) Compile(node ast.Node) error {
 			if c.lastInstructionIsPop() {
 				c.removeLastPop()
 			}
-			afterAlternativePos := len(c.instructions)
-			c.changeOperand(jumpPos, afterAlternativePos)
-		} else {
-			jumpPos := c.emit(code.OpJump, 0)
-			afterConsequencePos := len(c.instructions)
-			c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
-			c.emit(code.OpNull)
-			c.changeOperand(jumpPos, afterConsequencePos+1)
+			if len(c.instructions) == beforePos {
+				c.emit(code.OpNull)
+			}
 		}
+		afterAlternativePos := len(c.instructions)
+		c.changeOperand(jumpPos, afterAlternativePos)
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
 			err := c.Compile(node.Right)
@@ -122,6 +128,19 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.emit(code.OpNotEqual)
 		case ">":
 			c.emit(code.OpGreaterThan)
+		default:
+			return fmt.Errorf("unknown operator: %s", node.Operator)
+		}
+	case *ast.PrefixExpression:
+		err := c.Compile(node.Right)
+		if err != nil {
+			return err
+		}
+		switch node.Operator {
+		case "!":
+			c.emit(code.OpBang)
+		case "-":
+			c.emit(code.OpMinus)
 		default:
 			return fmt.Errorf("unknown operator: %s", node.Operator)
 		}

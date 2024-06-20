@@ -71,6 +71,15 @@ func TestIntegerArithmetic(t *testing.T) {
 				code.Make(code.OpPop),
 			},
 		},
+		{
+			input:             "-1",
+			expectedConstants: []interface{}{1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpMinus),
+				code.Make(code.OpPop),
+			},
+		},
 	}
 
 	runCompilerTests(t, tests)
@@ -134,6 +143,15 @@ func TestBooleanExpressions(t *testing.T) {
 				code.Make(code.OpPop),
 			},
 		},
+		{
+			input:             "!true",
+			expectedConstants: []interface{}{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpBang),
+				code.Make(code.OpPop),
+			},
+		},
 	}
 	runCompilerTests(t, tests)
 }
@@ -181,6 +199,50 @@ func TestConditionals(t *testing.T) {
 				// 0014
 				code.Make(code.OpConstant, 2),
 				// 0017
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             `if (true) { }; 3333;`,
+			expectedConstants: []interface{}{3333},
+			expectedInstructions: []code.Instructions{
+				// 0000
+				code.Make(code.OpTrue),
+				// 0001
+				code.Make(code.OpJumpNotTruthy, 8),
+				// 0004
+				code.Make(code.OpNull),
+				// 0005
+				code.Make(code.OpJump, 9),
+				// 0008
+				code.Make(code.OpNull),
+				// 0009
+				code.Make(code.OpPop),
+				// 0010
+				code.Make(code.OpConstant, 0),
+				// 0013
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             `if (true) { } else { }; 3333;`,
+			expectedConstants: []interface{}{3333},
+			expectedInstructions: []code.Instructions{
+				// 0000
+				code.Make(code.OpTrue),
+				// 0001
+				code.Make(code.OpJumpNotTruthy, 8),
+				// 0004
+				code.Make(code.OpNull),
+				// 0005
+				code.Make(code.OpJump, 9),
+				// 0008
+				code.Make(code.OpNull),
+				// 0009
+				code.Make(code.OpPop),
+				// 0010
+				code.Make(code.OpConstant, 0),
+				// 0013
 				code.Make(code.OpPop),
 			},
 		},

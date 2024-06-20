@@ -66,6 +66,20 @@ func (vm *VM) Run() error {
 			vm.push(FALSE)
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
 			vm.execCompareOperation(op)
+		case code.OpMinus:
+			val := vm.pop()
+			if val.Type() != object.INTEGER_OBJ {
+				return fmt.Errorf("unsupported type for minus operation: %s", val.Type())
+			}
+			v := val.(*object.Integer).Value
+			vm.push(&object.Integer{Value: -v})
+		case code.OpBang:
+			val := vm.pop()
+			if isTruthy(val) {
+				vm.push(FALSE)
+			} else {
+				vm.push(TRUE)
+			}
 		case code.OpJump:
 			pos := int(code.ReadUint16(vm.instructions[ip+1:]))
 			ip = pos - 1
@@ -199,6 +213,8 @@ func isTruthy(obj object.Object) bool {
 	switch obj := obj.(type) {
 	case *object.Boolean:
 		return obj.Value
+	case *object.Null:
+		return false
 	default:
 		return true
 	}

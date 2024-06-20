@@ -106,6 +106,7 @@ func TestIntegerArithmetic(t *testing.T) {
 		{"2 * 3", 6},
 		{"6 / 2", 3},
 		{"6 / (2 + 1)", 2},
+		{"-1", -1},
 	}
 
 	runVmTests(t, tests)
@@ -136,6 +137,10 @@ func TestBooleanExpressions(t *testing.T) {
 		{"(1 > 2) == true", false},
 		{"(1 > 2) == false", true},
 		{"if (true) { true }", true},
+		{"!true", false},
+		{"!1", false},
+		{"!(if (false) { true })", true},
+		{"!(if (false) {  } else {  })", true},
 	}
 
 	runVmTests(t, tests)
@@ -151,6 +156,8 @@ func TestConditionals(t *testing.T) {
 		{"if (1 < 2) { 10 } else { 20 }", 10},
 		{"if (1 > 2) { 10 } else { 20 }", 20},
 		{"if (false) { 10 }", NULL},
+		{"if (true) {  }", NULL},
+		{"if (false) {  } else {  }", NULL},
 	}
 
 	runVmTests(t, tests)
