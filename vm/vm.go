@@ -109,6 +109,14 @@ func (vm *VM) Run() error {
 			index := int(code.ReadUint16(vm.instructions[ip+1:]))
 			ip += 2
 			vm.push(vm.globals[index])
+		case code.OpArray:
+			arrLen := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip += 2
+			arr := &object.Array{Elements: make([]object.Object, arrLen)}
+			for i := arrLen - 1; i >= 0; i-- {
+				arr.Elements[i] = vm.pop()
+			}
+			vm.push(arr)
 		}
 	}
 	return nil
