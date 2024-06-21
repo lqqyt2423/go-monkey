@@ -117,6 +117,22 @@ func (vm *VM) Run() error {
 				arr.Elements[i] = vm.pop()
 			}
 			vm.push(arr)
+		case code.OpIndex:
+			idx := vm.pop()
+			if idx.Type() != object.INTEGER_OBJ {
+				return fmt.Errorf("invalid index type %s", idx.Type())
+			}
+			arr := vm.pop()
+			if arr.Type() != object.ARRAY_OBJ {
+				return fmt.Errorf("type %s can not index", arr.Type())
+			}
+			idxVal := idx.(*object.Integer).Value
+			arrElements := arr.(*object.Array).Elements
+			if idxVal < 0 || idxVal >= int64(len(arrElements)) {
+				vm.push(NULL)
+			} else {
+				vm.push(arrElements[idxVal])
+			}
 		}
 	}
 	return nil

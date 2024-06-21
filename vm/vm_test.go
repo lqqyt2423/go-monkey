@@ -230,3 +230,16 @@ func TestArrayLiterals(t *testing.T) {
 
 	runVmTests(t, tests)
 }
+
+func TestIndexExpressions(t *testing.T) {
+	tests := []vmTestCase{
+		{"[1, 2, 3][1]", 2},
+		{"[1, 2, 3][0 + 2]", 3},
+		{"[[1, 1, 1]][0][0]", 1},
+		{"[][0]", NULL},
+		{"[1, 2, 3][99]", NULL},
+		{"[1][-1]", NULL},
+	}
+
+	runVmTests(t, tests)
+}
