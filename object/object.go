@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lqqyt2423/go-monkey/ast"
+	"github.com/lqqyt2423/go-monkey/code"
 )
 
 type Environment struct {
@@ -50,16 +51,17 @@ type Object interface {
 }
 
 const (
-	INTEGER_OBJ      ObjectType = "INTEGER"
-	STRING_OBJ       ObjectType = "STRING"
-	BOOLEAN_OBJ      ObjectType = "BOOLEAN"
-	NULL_OBJ         ObjectType = "NULL"
-	RETURN_VALUE_OBJ ObjectType = "RETURN_VALUE"
-	ERROR_OBJ        ObjectType = "ERROR"
-	FUNCTION_OBJ     ObjectType = "FUNCTION"
-	BUILTIN_OBJ      ObjectType = "BUILTIN"
-	ARRAY_OBJ        ObjectType = "ARRAY"
-	HASH_OBJ         ObjectType = "HASH"
+	INTEGER_OBJ           ObjectType = "INTEGER"
+	STRING_OBJ            ObjectType = "STRING"
+	BOOLEAN_OBJ           ObjectType = "BOOLEAN"
+	NULL_OBJ              ObjectType = "NULL"
+	RETURN_VALUE_OBJ      ObjectType = "RETURN_VALUE"
+	ERROR_OBJ             ObjectType = "ERROR"
+	FUNCTION_OBJ          ObjectType = "FUNCTION"
+	BUILTIN_OBJ           ObjectType = "BUILTIN"
+	ARRAY_OBJ             ObjectType = "ARRAY"
+	HASH_OBJ              ObjectType = "HASH"
+	COMPILED_FUNCTION_OBJ ObjectType = "COMPILED_FUNCTION"
 )
 
 type Integer struct {
@@ -164,4 +166,13 @@ func (h *Hash) Inspect() string {
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
 	return out.String()
+}
+
+type CompiledFunction struct {
+	Instructions code.Instructions
+}
+
+func (cf *CompiledFunction) Type() ObjectType { return COMPILED_FUNCTION_OBJ }
+func (cf *CompiledFunction) Inspect() string {
+	return fmt.Sprintf("CompiledFunction[%p]", cf)
 }
