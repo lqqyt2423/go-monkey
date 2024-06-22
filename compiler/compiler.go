@@ -28,8 +28,12 @@ type Compiler struct {
 }
 
 func New() *Compiler {
+	symbolTable := NewSymbolTable()
+	for i, v := range object.Builtins {
+		symbolTable.DefineBuiltin(i, v.Name)
+	}
 	return &Compiler{
-		symbolTable: NewSymbolTable(),
+		symbolTable: symbolTable,
 		scopes:      []CompilationScope{CompilationScope{}},
 	}
 }
@@ -188,7 +192,9 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if !ok {
 			return fmt.Errorf("undefined variable %s", node.Value)
 		}
-		if symbol.Scope == GlobalScope {
+		if symbol.Scope == BuiltinScope {
+			c.emit(code.OpGetBuiltin, symbol.Index)
+		} else if symbol.Scope == GlobalScope {
 			c.emit(code.OpGetGlobal, symbol.Index)
 		} else {
 			c.emit(code.OpGetLocal, symbol.Index)

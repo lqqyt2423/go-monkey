@@ -141,6 +141,11 @@ func (vm *VM) Run() error {
 			vm.currentFrame().ip += 1
 			frame := vm.currentFrame()
 			vm.push(vm.stack[frame.basePointer+int(localIndex)])
+		case code.OpGetBuiltin:
+			builtinIndex := int(ins[ip+1])
+			vm.currentFrame().ip += 1
+			definition := object.Builtins[builtinIndex]
+			vm.push(definition.Builtin)
 		case code.OpArray:
 			arrLen := int(code.ReadUint16(ins[ip+1:]))
 			vm.currentFrame().ip += 2
@@ -167,17 +172,32 @@ func (vm *VM) Run() error {
 			}
 		case code.OpCall:
 			numArgs := int(ins[ip+1])
-			fn, ok := vm.stack[vm.sp-numArgs-1].(*object.CompiledFunction)
-			if !ok {
+			vm.currentFrame().ip += 1
+
+			callee := vm.stack[vm.sp-numArgs-1]
+			switch callee := callee.(type) {
+			case *object.CompiledFunction:
+				fn := callee
+				if numArgs != fn.NumParameters {
+					return fmt.Errorf("wrong number of arguments: want=%d, got=%d", fn.NumParameters, numArgs)
+				}
+				frame := NewFrame(fn, vm.sp-numArgs)
+				vm.pushFrame(frame)
+				vm.sp = frame.basePointer + fn.NumLocals
+			case *object.Builtin:
+				builtin := callee
+				args := vm.stack[vm.sp-numArgs : vm.sp]
+				result := builtin.Fn(args...)
+				vm.sp = vm.sp - numArgs - 1
+				if result != nil {
+					vm.push(result)
+				} else {
+					vm.push(NULL)
+				}
+			default:
 				return fmt.Errorf("calling non-function")
 			}
-			if numArgs != fn.NumParameters {
-				return fmt.Errorf("wrong number of arguments: want=%d, got=%d", fn.NumParameters, numArgs)
-			}
-			vm.currentFrame().ip += 1
-			frame := NewFrame(fn, vm.sp-numArgs)
-			vm.pushFrame(frame)
-			vm.sp = frame.basePointer + fn.NumLocals
+
 		case code.OpReturnValue:
 			returnValue := vm.pop()
 			frame := vm.popFrame()

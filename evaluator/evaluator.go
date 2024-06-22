@@ -14,24 +14,7 @@ var (
 )
 
 var builtins = map[string]*object.Builtin{
-	"len": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("arguments len %d mismatch, want %d", len(args), 1)
-			}
-			arg := args[0]
-			switch argObj := arg.(type) {
-			case *object.String:
-				return &object.Integer{Value: int64(len(argObj.Value))}
-			case *object.Array:
-				return &object.Integer{Value: int64(len(argObj.Elements))}
-			case *object.Hash:
-				return &object.Integer{Value: int64(len(argObj.Pairs))}
-			default:
-				return newError("type mismatch: %s", arg.Type())
-			}
-		},
-	},
+	"len": object.GetBuiltinByName("len"),
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {

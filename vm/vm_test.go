@@ -132,6 +132,16 @@ func testExpectedObject(
 				t.Errorf("testIntegerObject failed: %s", err)
 			}
 		}
+	case *object.Error:
+		errObj, ok := actual.(*object.Error)
+		if !ok {
+			t.Errorf("object is not Error: %T (%+v)", actual, actual)
+			return
+		}
+		if errObj.Message != expected.Message {
+			t.Errorf("wrong error message. expected=%q, got=%q",
+				expected.Message, errObj.Message)
+		}
 	}
 }
 
@@ -501,4 +511,28 @@ func TestCallingFunctionsWithWrongArguments(t *testing.T) {
 			t.Fatalf("wrong VM error: want=%q, got=%q", tt.expected, err)
 		}
 	}
+}
+
+func TestBuiltinFunctions(t *testing.T) {
+	tests := []vmTestCase{
+		{`len("")`, 0},
+		{`len("four")`, 4},
+		{`len("hello world")`, 11},
+		{
+			`len(1)`,
+			&object.Error{
+				Message: "type mismatch: INTEGER",
+			},
+		},
+		{`len("one", "two")`,
+			&object.Error{
+				Message: "arguments len 2 mismatch, want 1",
+			},
+		},
+		{`len([1, 2, 3])`, 3},
+		{`len([])`, 0},
+		{`puts("hello", "world!")`, NULL},
+	}
+
+	runVmTests(t, tests)
 }
